@@ -165,10 +165,10 @@ async def metadata(filename: str, channel: int, msg_id) -> dict | None:
         return None
 
     # Skip split/multipart files
-    multipart_pattern = compile(r'(?:part|cd|disc|disk)[s._-]*\d+(?=\.\w+$)', IGNORECASE)
-    if multipart_pattern.search(filename):
-        LOGGER.info(f"Skipping {filename}: seems to be a split/multipart file")
-        return None
+    # multipart_pattern = compile(r'(?:part|cd|disc|disk)[s._-]*\d+(?=\.\w+$)', IGNORECASE)
+    # if multipart_pattern.search(filename):
+    #     LOGGER.info(f"Skipping {filename}: seems to be a split/multipart file")
+    #     return None
 
     title = parsed.get("title")
     season = parsed.get("season")
