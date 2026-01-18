@@ -311,14 +311,13 @@ class Database:
                 except Exception as e:
                     LOGGER.error(f"Failed to delete old quality: {e}")
 
-            existing_qualities = [
                 q for q in existing_qualities if q.get("quality") != target_quality
             ]
-            existing_qualities.append(quality_to_update)
+            existing_qualities.insert(0, quality_to_update)
 
         else:
             # allow duplicate qualities
-            existing_qualities.append(quality_to_update)
+            existing_qualities.insert(0, quality_to_update)
 
         existing_movie["telegram"] = existing_qualities
         existing_movie["updated_on"] = datetime.utcnow()
@@ -438,14 +437,13 @@ class Database:
                             except Exception as e:
                                 LOGGER.error(f"Failed to delete old quality: {e}")
 
-                        existing_episode["telegram"] = [
                             q for q in existing_episode["telegram"]
                             if q.get("quality") != target_quality
                         ]
-                        existing_episode["telegram"].append(quality)
+                        existing_episode["telegram"].insert(0, quality)
 
                     else:
-                        existing_episode["telegram"].append(quality)
+                        existing_episode["telegram"].insert(0, quality)
 
         existing_tv["updated_on"] = datetime.utcnow()
 
