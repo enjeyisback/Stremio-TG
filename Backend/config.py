@@ -27,4 +27,5 @@ class Telegram:
     ADMIN_PASSWORD = getenv("ADMIN_PASSWORD", "fyvio")
     
     CINEMETA_SUPPORT = getenv("CINEMETA_SUPPORT", "false").lower() == "true"
+    ENABLE_CUSTOM_CATALOGS = getenv("ENABLE_CUSTOM_CATALOGS", "true").lower() == "true"
     

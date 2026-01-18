@@ -112,7 +112,9 @@ async def get_manifest():
         "description": "Streams movies and series from your Telegram.",
         "types": ["movie", "series"],
         "resources": ["catalog", "meta", "stream"],
-        "catalogs": [
+    catalogs = []
+    if Telegram.ENABLE_CUSTOM_CATALOGS:
+        catalogs = [
             {
                 "type": "movie",
                 "id": "latest_movies",
@@ -155,7 +157,17 @@ async def get_manifest():
                 ],
                 "extraSupported": ["genre", "skip", "search"]
             }
-        ],
+        ]
+
+    return {
+        "id": "telegram.media",
+        "version": ADDON_VERSION,
+        "name": ADDON_NAME,
+        "logo": "https://i.postimg.cc/XqWnmDXr/Picsart-25-10-09-08-09-45-867.png",
+        "description": "Streams movies and series from your Telegram.",
+        "types": ["movie", "series"],
+        "resources": ["catalog", "meta", "stream"],
+        "catalogs": catalogs,
         "idPrefixes": id_prefixes,
         "behaviorHints": {
             "configurable": False,
