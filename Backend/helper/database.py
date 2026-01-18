@@ -311,6 +311,7 @@ class Database:
                 except Exception as e:
                     LOGGER.error(f"Failed to delete old quality: {e}")
 
+            existing_qualities = [
                 q for q in existing_qualities if q.get("quality") != target_quality
             ]
             existing_qualities.insert(0, quality_to_update)
@@ -437,6 +438,7 @@ class Database:
                             except Exception as e:
                                 LOGGER.error(f"Failed to delete old quality: {e}")
 
+                        existing_episode["telegram"] = [
                             q for q in existing_episode["telegram"]
                             if q.get("quality") != target_quality
                         ]
