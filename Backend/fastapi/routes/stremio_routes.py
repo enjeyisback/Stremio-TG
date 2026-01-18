@@ -351,8 +351,29 @@ async def get_streams(media_type: str, id: str):
         return {"streams": []}
 
     streams = []
+    
+    # Group files by quality/resolution to detect multi-part content
+    quality_groups = {}
+    
     for quality in media_details.get("telegram", []):
         if quality.get("id"):
+            q_val = quality.get('quality', 'HD')
+            if q_val not in quality_groups:
+                quality_groups[q_val] = []
+            quality_groups[q_val].append(quality)
+
+    # Process groups
+    for q_val, files in quality_groups.items():
+        # If multiple files exist for this quality, add a Playlist stream
+        if len(files) > 1:
+            streams.append({
+                "name": f"🎬 Play All {q_val}",
+                "title": f"M3U8 Playlist\n{len(files)} Parts • {q_val}",
+                "url": f"{BASE_URL}/playlist/{id}/{q_val}.m3u8"
+            })
+            
+        # Add individual file streams
+        for quality in files:
             filename = quality.get('name', '')
             quality_str = quality.get('quality', 'HD')
             size = quality.get('size', '')

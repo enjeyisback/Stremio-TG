@@ -7,6 +7,7 @@ from Backend import __version__
 from Backend.fastapi.security.credentials import require_auth
 from Backend.fastapi.routes.stream_routes import router as stream_router
 from Backend.fastapi.routes.stremio_routes import router as stremio_router
+from Backend.fastapi.routes.playlist_routes import router as playlist_router
 from Backend.fastapi.routes.template_routes import (
     login_page, login_post, logout, set_theme, dashboard_page,
     media_management_page, edit_media_page, public_status_page, stremio_guide_page
@@ -41,6 +42,7 @@ except Exception:
 # --- Include existing API routers ---
 app.include_router(stream_router)
 app.include_router(stremio_router)
+app.include_router(playlist_router)
 
 # --- Public Routes (No Authentication Required) ---
 @app.get("/login", response_class=HTMLResponse)
