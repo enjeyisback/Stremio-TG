@@ -414,6 +414,21 @@ If you want to **completely remove** the current installation and re-deploy the 
 
 Your server will be back online with the latest code and your previous configuration.
 
+### 🔍 Checking Status
+
+To check if your server is up and running:
+
+1.  **Check Running Containers**:
+    ```bash
+    docker compose ps
+    ```
+    You should see `tg_stremio` with `Up` status and port `0.0.0.0:8081->8081/tcp`.
+
+2.  **View Logs (Real-time)**:
+    ```bash
+    docker compose logs -f
+    ```
+
 ### 🌐 Step 3: Add Domain (Required)
 
 #### 🅰️ Set Up DNS Records

@@ -463,6 +463,8 @@ class Database:
         try:
             await self.dbs[existing_db_key]["tv"].replace_one({"_id": tv_id}, existing_tv)
             return tv_id
+        except Exception as e:
+            LOGGER.error(f"Failed to update TV show {tmdb_id} in {existing_db_key}: {e}")
             if any(keyword in str(e).lower() for keyword in ["storage", "quota"]):
                 return await self._handle_storage_error(self.update_tv_show, tv_show_data, total_storage_dbs=total_storage_dbs)
     
