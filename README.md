@@ -241,7 +241,7 @@ All environment variables for this project are defined in the `config.env` file.
 | Variable | Description |
 | :--- | :--- |
 | **`BASE_URL`** | The Domain or Heroku app URL (e.g. `https://your-domain.com`). Crucial for Stremio addon setup. |
-| **`PORT`** | The port number on which your FastAPI server will run. *Default: `8000`*. |
+| **`PORT`** | The port number on which your FastAPI server will run. *Default: `8081`*. |
 
 ### 🔄 Update Settings
 
@@ -333,7 +333,7 @@ docker compose up -d
 ```
 
 Your server will now be running at:
-➡️ `http://<your-vps-ip>:8000`
+➡️ `http://<your-vps-ip>:8081`
 
 ---
 
@@ -370,11 +370,11 @@ docker build -t telegram-stremio .
 #### 🚀 Run the Container
 
 ```bash
-docker run -d -p 8000:8000 telegram-stremio
+docker run -d -p 8081:8081 telegram-stremio
 ```
 
 Your server should now be running at:
-➡️ `http://<your-vps-ip>:8000`
+➡️ `http://<your-vps-ip>:8081`
 
 
 
@@ -466,7 +466,7 @@ sudo apt install caddy
 
    ```caddy
    your-domain.com {
-       reverse_proxy localhost:8000
+       reverse_proxy localhost:8081
    }
    ```
 
