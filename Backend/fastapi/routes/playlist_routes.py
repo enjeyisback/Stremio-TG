@@ -1,7 +1,7 @@
 import re
 from fastapi import APIRouter, Response, HTTPException
 from Backend import db
-from Backend.config import Telegram, BASE_URL
+from Backend.config import Telegram
 
 router = APIRouter(tags=["Playlist"])
 
@@ -83,7 +83,7 @@ async def get_playlist(media_id: str, quality: str):
             clean_name = re.sub(r'[^\w\s\-\.]', '', name)
             m3u8_content.append(f"#EXTINF:-1, {clean_name}")
             # Direct download link
-            m3u8_content.append(f"{BASE_URL}/dl/{file_obj.get('id')}/video.mkv")
+            m3u8_content.append(f"{Telegram.BASE_URL}/dl/{file_obj.get('id')}/video.mkv")
             
     m3u8_content.append("#EXT-X-ENDLIST")
     
