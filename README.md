@@ -376,6 +376,44 @@ Your server should now be running at:
 
 
 
+### 🔄 Clean Re-deployment
+
+If you want to **completely remove** the current installation and re-deploy the latest version (e.g., to apply code updates or reset the environment):
+
+1.  **Stop the running containers**:
+    ```bash
+    docker compose down
+    ```
+
+2.  **Backup your configuration**:
+    ```bash
+    cp config.env ../config.env.bak
+    ```
+
+3.  **Remove the project directory**:
+    ```bash
+    cd ..
+    rm -rf Telegram-Stremio
+    ```
+
+4.  **Clone the latest code**:
+    ```bash
+    git clone https://github.com/enjeyisback/Stremio-TG.git Telegram-Stremio
+    cd Telegram-Stremio
+    ```
+
+5.  **Restore configuration**:
+    ```bash
+    mv ../config.env.bak config.env
+    ```
+
+6.  **Start the server**:
+    ```bash
+    docker compose up -d --build
+    ```
+
+Your server will be back online with the latest code and your previous configuration.
+
 ### 🌐 Step 3: Add Domain (Required)
 
 #### 🅰️ Set Up DNS Records
