@@ -295,6 +295,26 @@ class Database:
         # ---------------- UPDATE MOVIE ----------------
         movie_id = existing_movie["_id"]
         existing_qualities = existing_movie.get("telegram", [])
+        
+        # Always remove duplicates with same FILENAME (regardless of REPLACE_MODE)
+        new_filename = quality_to_update.get("name", "")
+        if new_filename:
+            to_delete_by_name = [q for q in existing_qualities if q.get("name") == new_filename]
+            
+            for q in to_delete_by_name:
+                try:
+                    old_id = q.get("id")
+                    if old_id:
+                        decoded = await decode_string(old_id)
+                        chat_id = int(f"-100{decoded['chat_id']}")
+                        msg_id = int(decoded['msg_id'])
+                        create_task(delete_message(chat_id, msg_id))
+                        LOGGER.info(f"Deleted duplicate file: {new_filename}")
+                except Exception as e:
+                    LOGGER.error(f"Failed to delete duplicate file: {e}")
+            
+            # Remove entries with same filename
+            existing_qualities = [q for q in existing_qualities if q.get("name") != new_filename]
 
         if Telegram.REPLACE_MODE:
             # delete all same-quality entries
@@ -420,6 +440,25 @@ class Database:
 
                 for quality in episode["telegram"]:
                     target_quality = quality.get("quality")
+                    new_filename = quality.get("name", "")
+                    
+                    # Always remove duplicates with same FILENAME
+                    if new_filename:
+                        to_delete_by_name = [q for q in existing_episode["telegram"] if q.get("name") == new_filename]
+                        
+                        for q in to_delete_by_name:
+                            try:
+                                old_id = q.get("id")
+                                if old_id:
+                                    decoded = await decode_string(old_id)
+                                    chat_id = int(f"-100{decoded['chat_id']}")
+                                    msg_id = int(decoded['msg_id'])
+                                    create_task(delete_message(chat_id, msg_id))
+                                    LOGGER.info(f"Deleted duplicate file: {new_filename}")
+                            except Exception as e:
+                                LOGGER.error(f"Failed to delete duplicate file: {e}")
+                        
+                        existing_episode["telegram"] = [q for q in existing_episode["telegram"] if q.get("name") != new_filename]
 
                     if Telegram.REPLACE_MODE:
                         to_delete = [
