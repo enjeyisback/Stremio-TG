@@ -1,6 +1,6 @@
 import re
 from fastapi import APIRouter, Response, HTTPException
-from Backend.helper.database import db
+from Backend import db
 from Backend.config import Telegram, BASE_URL
 
 router = APIRouter(tags=["Playlist"])
