@@ -13,6 +13,7 @@ def get_part_number(filename: str) -> int:
         return int(match.group(1))
     return 999999 # Fallback for non-matching files to go to end
 
+@router.head("/playlist/{media_id}/{quality}.m3u8")
 @router.get("/playlist/{media_id}/{quality}.m3u8")
 async def get_playlist(media_id: str, quality: str):
     """Generate M3U8 playlist for multi-part files of a specific quality."""
@@ -73,18 +74,17 @@ async def get_playlist(media_id: str, quality: str):
     # Sort by part number
     target_files.sort(key=lambda x: get_part_number(x.get("name", "")))
 
-    # 4. Generate M3U8
-    m3u8_content = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:3600", "#EXT-X-PLAYLIST-TYPE:VOD"]
+    # 4. Generate simple M3U playlist (not HLS segments)
+    # Using basic M3U format that players understand for sequential file playback
+    m3u8_content = ["#EXTM3U"]
     
     for file_obj in target_files:
         if file_obj.get("id"):
             name = file_obj.get("name", "Video")
             # Clean name for EXTINF
             clean_name = re.sub(r'[^\w\s\-\.]', '', name)
-            m3u8_content.append(f"#EXTINF:-1, {clean_name}")
+            m3u8_content.append(f"#EXTINF:-1,{clean_name}")
             # Direct download link
             m3u8_content.append(f"{Telegram.BASE_URL}/dl/{file_obj.get('id')}/video.mkv")
-            
-    m3u8_content.append("#EXT-X-ENDLIST")
     
-    return Response(content="\n".join(m3u8_content), media_type="application/vnd.apple.mpegurl")
+    return Response(content="\n".join(m3u8_content), media_type="audio/x-mpegurl")
