@@ -362,23 +362,29 @@ async def get_streams(media_type: str, id: str):
                 quality_groups[q_val] = []
             quality_groups[q_val].append(quality)
 
-    # Process groups
+    # Process groups with part numbering
     for q_val, files in quality_groups.items():
-        # If multiple files exist for this quality, add a Playlist stream
-        if len(files) > 1:
-            streams.append({
-                "name": f"🎬 Play All {q_val}",
-                "title": f"M3U8 Playlist\n{len(files)} Parts • {q_val}",
-                "url": f"{BASE_URL}/playlist/{id}/{q_val}.m3u8"
-            })
+        total_parts = len(files)
+        
+        # Sort files by part number if multi-part
+        if total_parts > 1:
+            import re
+            def get_part_num(f):
+                match = re.search(r"part\s*0*(\d+)", f.get("name", ""), re.IGNORECASE)
+                return int(match.group(1)) if match else 999999
+            files.sort(key=get_part_num)
             
-        # Add individual file streams
-        for quality in files:
+        # Add individual file streams with part labels
+        for idx, quality in enumerate(files, 1):
             filename = quality.get('name', '')
             quality_str = quality.get('quality', 'HD')
             size = quality.get('size', '')
 
             stream_name, stream_title = format_stream_details(filename, quality_str, size)
+            
+            # Add part number if multi-part
+            if total_parts > 1:
+                stream_name = f"📀 Part {idx}/{total_parts} • {stream_name}"
 
             streams.append({
                 "name": stream_name,
