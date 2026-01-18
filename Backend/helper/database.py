@@ -463,10 +463,35 @@ class Database:
         try:
             await self.dbs[existing_db_key]["tv"].replace_one({"_id": tv_id}, existing_tv)
             return tv_id
-        except Exception as e:
-            LOGGER.error(f"Failed to update TV show {tmdb_id} in {existing_db_key}: {e}")
             if any(keyword in str(e).lower() for keyword in ["storage", "quota"]):
                 return await self._handle_storage_error(self.update_tv_show, tv_show_data, total_storage_dbs=total_storage_dbs)
+    
+
+    async def get_media_by_imdb(self, imdb_id: str) -> Optional[dict]:
+        """
+        Search for a movie or TV show by its IMDb ID across all storage databases.
+        """
+        if not imdb_id:
+            return None
+
+        for db_index in range(1, self.current_db_index + 1):
+            db_key = f"storage_{db_index}"
+            db = self.dbs[db_key]
+
+            # Try finding movie
+            movie = await db["movie"].find_one({"imdb_id": imdb_id})
+            if movie:
+                # Add db_index to the result so other functions know where it came from
+                movie["db_index"] = db_index
+                return convert_objectid_to_str(movie)
+
+            # Try finding TV show
+            tv_show = await db["tv"].find_one({"imdb_id": imdb_id})
+            if tv_show:
+                tv_show["db_index"] = db_index
+                return convert_objectid_to_str(tv_show)
+
+        return None
     
     async def sort_movies(self, sort_params, page, page_size, genre_filter=None):
         sort_dict = self._get_sort_dict(sort_params)

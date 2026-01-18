@@ -26,3 +26,5 @@ class Telegram:
     ADMIN_USERNAME = getenv("ADMIN_USERNAME", "fyvio")
     ADMIN_PASSWORD = getenv("ADMIN_PASSWORD", "fyvio")
     
+    CINEMETA_SUPPORT = getenv("CINEMETA_SUPPORT", "false").lower() == "true"
+    

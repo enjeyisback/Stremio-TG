@@ -100,6 +100,10 @@ def get_resolution_priority(stream_name: str) -> int:
 # --- Routes ---
 @router.get("/manifest.json")
 async def get_manifest():
+    id_prefixes = [""]
+    if Telegram.CINEMETA_SUPPORT:
+        id_prefixes.append("tt")
+
     return {
         "id": "telegram.media",
         "version": ADDON_VERSION,
@@ -152,7 +156,7 @@ async def get_manifest():
                 "extraSupported": ["genre", "skip", "search"]
             }
         ],
-        "idPrefixes": [""],
+        "idPrefixes": id_prefixes,
         "behaviorHints": {
             "configurable": False,
             "configurationRequired": False
@@ -214,13 +218,25 @@ async def get_catalog(media_type: str, id: str, extra: Optional[str] = None):
 
 @router.get("/meta/{media_type}/{id}.json")
 async def get_meta(media_type: str, id: str):
-    try:
-        tmdb_id_str, db_index_str = id.split("-")
-        tmdb_id, db_index = int(tmdb_id_str), int(db_index_str)
-    except (ValueError, IndexError):
-        raise HTTPException(status_code=400, detail="Invalid Stremio ID format")
+    # Support for Cinemeta IMDb IDs
+    if id.startswith("tt") and Telegram.CINEMETA_SUPPORT:
+        media = await db.get_media_by_imdb(id)
+        if not media:
+             return {"meta": {}}
+        # Create a hybrid ID to ensure we can resolve streams later if needed,
+        # but for meta response we might need to be careful.
+        # However, Stremio usually asks meta from the catalog source. 
+        # If this meta route is hit with tt ID, it means Stremio thinks we handle it.
+        pass # media loaded
+    else:
+        try:
+            tmdb_id_str, db_index_str = id.split("-")
+            tmdb_id, db_index = int(tmdb_id_str), int(db_index_str)
+            media = await db.get_media_details(tmdb_id=tmdb_id, db_index=db_index)
+        except (ValueError, IndexError):
+            # If standard splitting fails and it's not a tt ID supported case
+            raise HTTPException(status_code=400, detail="Invalid Stremio ID format")
 
-    media = await db.get_media_details(tmdb_id=tmdb_id, db_index=db_index)
     if not media:
         return {"meta": {}}
 
@@ -253,7 +269,15 @@ async def get_meta(media_type: str, id: str):
         for season in sorted(media.get("seasons", []), key=lambda s: s.get("season_number")):
             for episode in sorted(season.get("episodes", []), key=lambda e: e.get("episode_number")):
 
-                episode_id = f"{id}:{season['season_number']}:{episode['episode_number']}"
+                # Use internal ID format for episodes so get_streams works easily
+                # But if the main ID was tt, we might want to preserve that?
+                # Actually, video.id is what get_streams receives.
+                # If we return a video ID like tt123:1:1, get_streams receives that.
+                
+                if id.startswith("tt"):
+                     episode_id = f"{id}:{season['season_number']}:{episode['episode_number']}"
+                else: 
+                     episode_id = f"{id}:{season['season_number']}:{episode['episode_number']}"
 
                 videos.append({
                     "id": episode_id,
@@ -272,16 +296,45 @@ async def get_meta(media_type: str, id: str):
 
 @router.get("/stream/{media_type}/{id}.json")
 async def get_streams(media_type: str, id: str):
+    season_num = None
+    episode_num = None
+    tmdb_id = None
+    db_index = None
+    
     try:
         parts = id.split(":")
         base_id = parts[0]
-        season_num = int(parts[1]) if len(parts) > 1 else None
-        episode_num = int(parts[2]) if len(parts) > 2 else None
-        tmdb_id_str, db_index_str = base_id.split("-")
-        tmdb_id, db_index = int(tmdb_id_str), int(db_index_str)
+        
+        # Handle Cinemeta (IMDb) IDs
+        if base_id.startswith("tt") and Telegram.CINEMETA_SUPPORT:
+            media = await db.get_media_by_imdb(base_id)
+            if not media:
+                return {"streams": []}
+            
+            # Use the resolved internal details
+            tmdb_id = media.get("tmdb_id")
+            db_index = media.get("db_index")
+            
+            if len(parts) > 1:
+                season_num = int(parts[1])
+            if len(parts) > 2:
+                episode_num = int(parts[2])
+                
+        else:
+            # Custom ID format: tmdb_id-db_index
+            tmdb_id_str, db_index_str = base_id.split("-")
+            tmdb_id, db_index = int(tmdb_id_str), int(db_index_str)
+            
+            if len(parts) > 1:
+                season_num = int(parts[1])
+            if len(parts) > 2:
+                episode_num = int(parts[2])
 
-    except (ValueError, IndexError):
-        raise HTTPException(status_code=400, detail="Invalid Stremio ID format")
+    except (ValueError, IndexError, AttributeError):
+        # Fallback or invalid format
+        # If strict validation is needed, raise HTTPException. 
+        # But returning empty streams is safer to avoid crashing Stremio UI.
+        return {"streams": []}
 
     media_details = await db.get_media_details(
         tmdb_id=tmdb_id,
