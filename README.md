@@ -233,6 +233,8 @@ All environment variables for this project are defined in the `config.env` file.
 | Variable | Description |
 | :--- | :--- |
 | **`TMDB_API`** | Your **TMDB API key** from [themoviedb.org](https://www.themoviedb.org/settings/api). Used to fetch movie and TV metadata. |
+| **`CINEMETA_SUPPORT`** | Set to `True` to enable standard IMDb ID support (compatible with Cinemeta). *Default: `False`* |
+| **`ENABLE_CUSTOM_CATALOGS`** | Set to `True` to show "Latest/Popular" catalogs. Set to `False` to hide them and keep only Cinemeta. *Default: `True`* |
 
 ### 🌐 Server
 
