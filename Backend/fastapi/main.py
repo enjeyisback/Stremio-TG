@@ -131,6 +131,17 @@ async def get_workloads(_: bool = Depends(require_auth)):
     except Exception as e:
         return {"loads": {}}
 
+@app.post("/api/system/cleanup-duplicates")
+async def cleanup_duplicates(_: bool = Depends(require_auth)):
+    """Remove duplicate files with same filename from database and Telegram."""
+    try:
+        from Backend.helper.cleanup_duplicates import run_cleanup
+        result = await run_cleanup()
+        return {"success": True, "result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.exception_handler(401)
 async def auth_exception_handler(request: Request, exc):
     return RedirectResponse(url="/login", status_code=302)
