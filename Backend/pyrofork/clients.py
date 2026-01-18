@@ -45,8 +45,8 @@ async def initialize_clients():
         return
 
     tasks = [create_task(start_client(i, token)) for i, token in all_tokens.items()]
-    clients = await gather(*tasks)
-    clients = {client_id: client for client_id, client in clients if client} 
+    clients_results = await gather(*tasks)
+    clients = {result[0]: result[1] for result in clients_results if result is not None}
     multi_clients.update(clients)
     
     if len(multi_clients) != 1:
