@@ -356,7 +356,7 @@ async def get_streams(media_type: str, id: str):
     normal_files = []  # Regular files
     
     # Separate part files from normal files
-    part_pattern = re.compile(r"part\s*\d+", re.IGNORECASE)
+    part_pattern = re.compile(r"[._-]?part\s*\d+", re.IGNORECASE)
     
     for quality in media_details.get("telegram", []):
         if quality.get("id"):
@@ -366,28 +366,47 @@ async def get_streams(media_type: str, id: str):
             else:
                 normal_files.append(quality)
     
-    # Process part files with numbering
+    # Process part files - GROUP BY BASE FILENAME
     if part_files:
-        # Sort by part number
-        def get_part_num(f):
-            match = re.search(r"part\s*0*(\d+)", f.get("name", ""), re.IGNORECASE)
-            return int(match.group(1)) if match else 999999
-        part_files.sort(key=get_part_num)
+        # Extract base filename (everything before partXXX) and group
+        def get_base_name(filename):
+            # Remove the partXXX portion to get the base name
+            match = re.search(r"(.+?)[._-]?part\s*\d+", filename, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+            return filename
         
-        total_parts = len(part_files)
-        for idx, quality in enumerate(part_files, 1):
-            filename = quality.get('name', '')
-            quality_str = quality.get('quality', 'HD')
-            size = quality.get('size', '')
+        def get_part_num(filename):
+            match = re.search(r"part\s*0*(\d+)", filename, re.IGNORECASE)
+            return int(match.group(1)) if match else 999999
+        
+        # Group files by their base name
+        base_groups = {}
+        for f in part_files:
+            base = get_base_name(f.get("name", ""))
+            if base not in base_groups:
+                base_groups[base] = []
+            base_groups[base].append(f)
+        
+        # Process each group separately
+        for base_name, files in base_groups.items():
+            # Sort by part number within this group
+            files.sort(key=lambda f: get_part_num(f.get("name", "")))
             
-            stream_name, stream_title = format_stream_details(filename, quality_str, size)
-            stream_name = f"📀 Part {idx}/{total_parts} • {stream_name}"
-            
-            streams.append({
-                "name": stream_name,
-                "title": stream_title,
-                "url": f"{BASE_URL}/dl/{quality.get('id')}/video.mkv"
-            })
+            total_parts = len(files)
+            for idx, quality in enumerate(files, 1):
+                filename = quality.get('name', '')
+                quality_str = quality.get('quality', 'HD')
+                size = quality.get('size', '')
+                
+                stream_name, stream_title = format_stream_details(filename, quality_str, size)
+                stream_name = f"📀 Part {idx}/{total_parts} • {stream_name}"
+                
+                streams.append({
+                    "name": stream_name,
+                    "title": stream_title,
+                    "url": f"{BASE_URL}/dl/{quality.get('id')}/video.mkv"
+                })
     
     # Process normal files without part numbering
     for quality in normal_files:
@@ -405,3 +424,4 @@ async def get_streams(media_type: str, id: str):
 
     streams.sort(key=lambda s: get_resolution_priority(s.get("name", "")), reverse=True)
     return {"streams": streams}
+
