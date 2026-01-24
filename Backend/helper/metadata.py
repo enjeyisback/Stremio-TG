@@ -182,8 +182,8 @@ async def metadata(filename: str, channel: int, msg_id) -> dict | None:
         LOGGER.warning(f"Missing episode in {filename}: {parsed}")
         return None
     if not quality:
-        LOGGER.warning(f"Skipping {filename}: No resolution (parsed={parsed})")
-        return None
+        LOGGER.warning(f"No resolution parsed for {filename}, defaulting to 'Telegram HD'")
+        quality = "Telegram HD"
     if not title:
         LOGGER.info(f"No title parsed from: {filename} (parsed={parsed})")
         return None
