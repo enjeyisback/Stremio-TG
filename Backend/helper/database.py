@@ -461,10 +461,28 @@ class Database:
                         existing_episode["telegram"] = [q for q in existing_episode["telegram"] if q.get("name") != new_filename]
 
                     if Telegram.REPLACE_MODE:
-                        to_delete = [
-                            q for q in existing_episode["telegram"]
-                            if q.get("quality") == target_quality
-                        ]
+                        # Only delete same-quality entries IF they are NOT parts distinct from the new file
+                        # i.e., if new file is 'part2' and old is 'part1', KEEP 'part1'.
+                        import re
+                        part_pattern = re.compile(r"part\s*0*(\d+)", re.IGNORECASE)
+                        
+                        new_part_match = part_pattern.search(new_filename)
+                        new_is_part = bool(new_part_match)
+                        
+                        to_delete = []
+                        for q in existing_episode["telegram"]:
+                            if q.get("quality") == target_quality:
+                                # Check if existing file is a different part
+                                old_filename = q.get("name", "")
+                                old_part_match = part_pattern.search(old_filename)
+                                
+                                # If both are parts and have DIFFERENT part numbers, DO NOT delete
+                                if new_is_part and old_part_match:
+                                    if new_part_match.group(1) != old_part_match.group(1):
+                                        continue
+                                
+                                # Otherwise (not parts, or same part number, or mixed), mark for deletion
+                                to_delete.append(q)
 
                         for q in to_delete:
                             try:
@@ -479,7 +497,7 @@ class Database:
 
                         existing_episode["telegram"] = [
                             q for q in existing_episode["telegram"]
-                            if q.get("quality") != target_quality
+                            if q not in to_delete
                         ]
                         existing_episode["telegram"].insert(0, quality)
 
