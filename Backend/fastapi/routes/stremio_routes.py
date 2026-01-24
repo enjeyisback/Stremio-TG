@@ -170,7 +170,11 @@ async def get_manifest():
 
 @router.get("/catalog/{media_type}/{id}/{extra:path}.json")
 @router.get("/catalog/{media_type}/{id}.json")
-async def get_catalog(media_type: str, id: str, extra: Optional[str] = None):
+async def get_catalog(media_type: str, id: str, response: Response, extra: Optional[str] = None):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
     if media_type not in ["movie", "series"]:
         raise HTTPException(status_code=404, detail="Invalid catalog type")
 

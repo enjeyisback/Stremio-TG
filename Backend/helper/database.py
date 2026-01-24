@@ -139,6 +139,17 @@ class Database:
 
             if len(results) >= page_size:
                 break
+        
+        # Ensure the final list is sorted according to sort_dict/updated_on
+        # This handles cases where older DBs might have fresher content that needs to be merged correctly
+        sort_key = next(iter(sort_dict))
+        reverse_order = sort_dict[sort_key] == -1
+        
+        # Safely sort if the key exists (handle missing keys gracefully)
+        try:
+            results.sort(key=lambda x: x.get(sort_key) or datetime.min, reverse=reverse_order)
+        except Exception:
+            pass # Fallback if sorting fails
 
         return results, dbs_checked, total_count
 
