@@ -65,7 +65,7 @@ class ByteStreamer:
                 
                 async def fetch_chunk(p_idx, p_offset):
                     async with semaphore:
-                        for retry in range(3):
+                        for retry in range(5): # More retries for Turbo mode
                             try:
                                 r = await media_session.send(
                                     raw.functions.upload.GetFile(location=location, offset=p_offset, limit=chunk_size)
@@ -73,9 +73,17 @@ class ByteStreamer:
                                 if isinstance(r, raw.types.upload.File):
                                     return p_idx, r.bytes
                                 break
-                            except (FileReferenceExpired, RPCError):
+                            except FileReferenceExpired:
                                 raise
-                            except Exception:
+                            except FloodWait as e:
+                                LOGGER.warning(f"DEBUG: FloodWait in fetch_chunk ({p_idx}): {e.value}s")
+                                await asyncio.sleep(e.value + 1)
+                            except RPCError as e:
+                                LOGGER.error(f"DEBUG: RPCError in fetch_chunk ({p_idx}): {e}")
+                                if retry == 4: raise e
+                                await asyncio.sleep(1)
+                            except Exception as e:
+                                if retry == 4: raise e
                                 await asyncio.sleep(1)
                         return p_idx, None
 
@@ -99,12 +107,18 @@ class ByteStreamer:
                             result = await t
                             await queue.put(result)
                         except Exception as e:
-                            LOGGER.error(f"DEBUG: Fetch error: {e}")
+                            LOGGER.error(f"DEBUG: Fetch error collected: {e}")
                             await queue.put((-1, str(e)))
 
             except Exception as e:
                 LOGGER.error(f"DEBUG: Fetcher loop error: {e}")
             finally:
+                # CRITICAL: Clean up all pending tasks to avoid "Task exception was never retrieved"
+                for t in pending_tasks:
+                    t.cancel()
+                if pending_tasks:
+                    await asyncio.gather(*pending_tasks, return_exceptions=True)
+                
                 await queue.put((None, None))
                 fetcher_done.set()
 
