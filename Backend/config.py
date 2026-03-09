@@ -10,6 +10,7 @@ class Telegram:
     HELPER_BOT_TOKEN = getenv("HELPER_BOT_TOKEN", "")
 
     BASE_URL = getenv("BASE_URL", "").rstrip('/')
+    STREAM_URL = getenv("STREAM_URL", BASE_URL).rstrip('/')
     PORT = int(getenv("PORT", "8000"))
 
     AUTH_CHANNEL = [channel.strip() for channel in (getenv("AUTH_CHANNEL") or "").split(",") if channel.strip()]
