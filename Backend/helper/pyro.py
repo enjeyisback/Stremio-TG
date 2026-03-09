@@ -36,7 +36,7 @@ async def get_file_ids(client: Client, chat_id: int, message_id: int) -> Optiona
         else:
             raise FIleNotFound("No supported media found in message")
     except Exception as e:
-        LOGGER.error(f"Error getting file IDs: {e}")
+        LOGGER.error(f"Error getting file IDs for chat {chat_id}, msg {message_id}: {e}")
         raise
         
 

@@ -85,7 +85,7 @@ async def media_streamer(
     part_count = math.ceil(until_bytes / chunk_size) - math.floor(offset / chunk_size)
 
     body = tg_connect.yield_file(
-        file_id, index, offset, first_part_cut, last_part_cut, part_count, chunk_size
+        file_id, index, offset, first_part_cut, last_part_cut, part_count, chunk_size, int(chat_id), int(id)
     )
 
     file_name = file_id.file_name or f"{secrets.token_hex(2)}.unknown"
