@@ -34,7 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 try:
     app.mount("/static", StaticFiles(directory="Backend/fastapi/static"), name="static")

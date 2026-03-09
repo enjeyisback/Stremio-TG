@@ -38,6 +38,7 @@ def parse_range_header(range_header: str, file_size: int) -> Tuple[int, int]:
 @router.get("/dl/{id}/{name}")
 @router.head("/dl/{id}/{name}")
 async def stream_handler(request: Request, id: str, name: str):
+    LOGGER.info(f"DEBUG: Request received for {name}. Headers: {dict(request.headers)}")
     decoded_data = await decode_string(id)
     if not decoded_data.get("msg_id"):
         raise HTTPException(status_code=400, detail="Missing id")
