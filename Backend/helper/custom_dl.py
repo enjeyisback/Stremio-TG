@@ -47,7 +47,7 @@ class ByteStreamer:
     ) -> Union[bytes, None]: # type: ignore
         client = self.client
         work_loads[index] += 1
-        LOGGER.debug(f"Starting to yielding file with client {index}. DC: {file_id.dc_id}")
+        LOGGER.info(f"DEBUG: yield_file started for msg_id {message_id} on client {index}. DC: {file_id.dc_id}")
         
         current_part = 1
         location = await self.get_location(file_id)
@@ -55,8 +55,10 @@ class ByteStreamer:
         try:
             media_session = await self.generate_media_session(client, file_id)
             if not media_session:
-                LOGGER.error(f"Failed to generate media session for client {index}")
+                LOGGER.error(f"DEBUG: Failed to generate media session for client {index}")
                 return
+
+            LOGGER.info(f"DEBUG: Media session ready for client {index}. Starting GetFile loop.")
 
             while True:
                 try:
@@ -67,6 +69,7 @@ class ByteStreamer:
                     if isinstance(r, raw.types.upload.File):
                         chunk = r.bytes
                         if not chunk:
+                            LOGGER.info(f"DEBUG: No more bytes for client {index} at part {current_part}")
                             break
                         
                         if part_count == 1:
@@ -84,58 +87,57 @@ class ByteStreamer:
                         if current_part > part_count:
                             break
                     else:
-                        LOGGER.error(f"Unexpected response type from GetFile: {type(r)}")
+                        LOGGER.error(f"DEBUG: Unexpected response type from GetFile: {type(r)}")
                         break
 
                 except FileReferenceExpired:
-                    LOGGER.info(f"File reference expired for msg_id {message_id}, refreshing...")
+                    LOGGER.info(f"DEBUG: File reference expired for msg_id {message_id}, refreshing...")
                     file_id = await self.get_file_properties(chat_id, message_id, refresh=True)
                     location = await self.get_location(file_id)
-                    # Don't increment current_part, just retry the same part with new location
                     continue
                 
                 except FloodWait as e:
-                    LOGGER.warning(f"FloodWait in yield_file: {e.value}s. Client: {index}")
+                    LOGGER.warning(f"DEBUG: FloodWait in yield_file: {e.value}s. Client: {index}")
                     await asyncio.sleep(e.value)
                     continue
 
                 except RPCError as e:
-                    LOGGER.error(f"RPC Error in yield_file for client {index}: {e}")
+                    LOGGER.error(f"DEBUG: RPC Error in yield_file for client {index}: {e}")
                     break
                 
                 except Exception as e:
-                    LOGGER.error(f"Unexpected error in yield_file loop: {e}")
+                    LOGGER.error(f"DEBUG: Unexpected error in yield_file loop for client {index}: {e}")
                     break
 
         except Exception as e:
-            LOGGER.error(f"Critical error in yield_file for client {index}: {e}")
+            LOGGER.error(f"DEBUG: Critical error in yield_file for client {index}: {e}")
         finally:
-            LOGGER.debug(f"Finished yielding file with {current_part - 1} parts.")
+            LOGGER.info(f"DEBUG: Finished yielding file for client {index} with {current_part - 1} parts.")
             work_loads[index] -= 1
 
     async def generate_media_session(self, client: Client, file_id: FileId) -> Optional[Session]:
         dc_id = file_id.dc_id
         
-        # Check active sessions first (fast path)
+        # Fast path check: using .is_set() because is_started is an asyncio.Event
         media_session = client.media_sessions.get(dc_id)
-        if media_session and media_session.is_started:
+        if media_session and getattr(media_session, 'is_started', None) and media_session.is_started.is_set():
             return media_session
 
-        # Need to create/restart session (locked path to avoid thundering herd)
         lock = self.get_lock(dc_id)
         async with lock:
             # Check again inside lock
             media_session = client.media_sessions.get(dc_id)
-            if media_session and media_session.is_started:
+            if media_session and getattr(media_session, 'is_started', None) and media_session.is_started.is_set():
                 return media_session
             
-            LOGGER.info(f"Establishing new media session for DC {dc_id}...")
+            LOGGER.info(f"DEBUG: Establishing new media session for DC {dc_id}...")
             try:
                 if dc_id != await client.storage.dc_id():
+                    auth_key = await Auth(client, dc_id, await client.storage.test_mode()).create()
                     media_session = Session(
                         client,
                         dc_id,
-                        await Auth(client, dc_id, await client.storage.test_mode()).create(),
+                        auth_key,
                         await client.storage.test_mode(),
                         is_media=True,
                     )
@@ -147,18 +149,19 @@ class ByteStreamer:
                             await media_session.send(
                                 raw.functions.auth.ImportAuthorization(id=exported_auth.id, bytes=exported_auth.bytes)
                             )
+                            LOGGER.info(f"DEBUG: Auth imported for DC {dc_id} on attempt {i+1}")
                             break
                         except AuthBytesInvalid:
-                            LOGGER.debug(f"Invalid auth bytes for DC {dc_id}, attempt {i+1}")
+                            LOGGER.debug(f"DEBUG: Invalid auth bytes for DC {dc_id}, attempt {i+1}")
                         except FloodWait as e:
-                            LOGGER.warning(f"FloodWait during ExportAuth for DC {dc_id}: {e.value}s")
+                            LOGGER.warning(f"DEBUG: FloodWait during ExportAuth for DC {dc_id}: {e.value}s")
                             await asyncio.sleep(e.value)
                         except Exception as e:
-                            LOGGER.error(f"Error during ImportAuth for DC {dc_id}: {e}")
+                            LOGGER.error(f"DEBUG: Error during ImportAuth for DC {dc_id}: {e}")
                             await asyncio.sleep(1)
                     else:
                         await media_session.stop()
-                        LOGGER.error(f"Failed to establish media session for DC {dc_id} after retries")
+                        LOGGER.error(f"DEBUG: Failed to establish media session for DC {dc_id} after retries")
                         return None
                 else:
                     media_session = Session(
@@ -171,11 +174,11 @@ class ByteStreamer:
                     await media_session.start()
                 
                 client.media_sessions[dc_id] = media_session
-                LOGGER.info(f"Media session established for DC {dc_id}")
+                LOGGER.info(f"DEBUG: Media session established and started for DC {dc_id}")
                 return media_session
 
             except Exception as e:
-                LOGGER.error(f"Failed to create media session for DC {dc_id}: {e}")
+                LOGGER.error(f"DEBUG: Failed to create media session for DC {dc_id}: {e}")
                 return None
 
 
