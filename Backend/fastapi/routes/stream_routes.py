@@ -9,6 +9,7 @@ from Backend.helper.encrypt import decode_string
 from Backend.helper.exceptions import InvalidHash
 from Backend.helper.custom_dl import ByteStreamer
 from Backend.pyrofork.bot import StreamBot, work_loads, multi_clients
+from Backend.logger import LOGGER
 
 router = APIRouter(tags=["Streaming"])
 class_cache = {}
